@@ -75,8 +75,11 @@ dart run tool/run_core_tests.dart     # ۴۶ تست روی هستهٔ تشخیص
 - برای شنیده‌شدن آژیر، صدای رسانه/آلارم گوشی را بلند نگه دارید.
 - دوربین‌های `https` با گواهی خودامضا ممکن است در حالت MJPEG/Snapshot خطای گواهی بدهند؛ از `http` یا RTSP استفاده کنید.
 
+## حساب و درآمد
+نسخهٔ ۱٫۱ رایگان/پرو دارد: ثبت‌نام و ورود، مجوز و آمار از سرور (`server/`، راهنما: [`SERVER.md`](SERVER.md))، پرداخت درون‌برنامه‌ای بازار و مایکت با افزونهٔ `iran_iap`، و پنل مدیریت کاربران در `/admin`. تحلیل تصویر همچنان فقط روی گوشی است.
+
 ## انتشار
 - راهنمای کامل ساخت کلید، Secrets و مراحل بازار/مایکت/گوگل‌پلی: [`RELEASE.md`](RELEASE.md)
 - سیاست حریم خصوصی (پیش‌نویس): [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md)
 - متن‌های فروشگاه: [`STORE_LISTING.md`](STORE_LISTING.md)
-- ساخت خودکار APK/AAB: `.github/workflows/build.yml`
+- ساخت خودکار سه نسخه (`direct`، `bazaar`، `myket`) + AAB و تست سرور: `.github/workflows/build.yml`

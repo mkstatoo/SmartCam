@@ -11,13 +11,17 @@
 ## توضیح کامل
 «کارآگاه دوربین» دوربین‌های شما را زیر نظر می‌گیرد و وقتی حرکت، آتش یا دود ببیند، همان لحظه هشدار می‌دهد.
 
-**همهٔ پردازش روی گوشی شماست.** تصویری به اینترنت یا سرور ما فرستاده نمی‌شود؛ برنامه آمارگیر و تبلیغ ندارد.
+**تحلیل تصویر کاملاً روی گوشی شماست.** تصویر و ویدیوی دوربین‌ها هرگز به اینترنت یا سرور ما نمی‌رود؛ فقط حساب کاربری و آمار عددی (مثل تعداد رویدادها) برای ورود و فعال‌سازی نسخهٔ پرو ارسال می‌شود. برنامه تبلیغ ندارد.
 
 **دوربین‌های پشتیبانی‌شده**
 - دوربین‌های IP با RTSP (هایک‌ویژن، داهوا و …)
 - یافتن خودکار دوربین‌های ONVIF در شبکهٔ خانه
 - جریان MJPEG و عکس لحظه‌ای روی HTTP
 - یک گوشی قدیمی به‌عنوان دوربین، یا دوربین همین گوشی
+
+**نسخهٔ رایگان و پرو**
+- رایگان: تا ۲ دوربین، تشخیص حرکت، پایش تا وقتی برنامه باز است، ۲۰ رویداد اخیر
+- پرو (یک‌بار پرداخت، بدون اشتراک): دوربین نامحدود، تشخیص آتش و دود، تعیین ناحیهٔ پایش، پایش در پس‌زمینه و با صفحهٔ خاموش، تاریخچهٔ بلندتر
 
 **قابلیت‌ها**
 - تشخیص حرکت با تنظیم حساسیت و فیلتر تغییر نور
@@ -35,7 +39,7 @@
 - قوانین حریم خصوصی را در مکان‌هایی که دیگران حضور دارند رعایت کنید.
 
 ## تغییرات نسخهٔ اول
-نخستین انتشار: تشخیص حرکت، آتش و دود؛ پشتیبانی RTSP/ONVIF/MJPEG؛ آژیر و اعلان.
+نسخهٔ ۱٫۱: حساب کاربری، نسخهٔ رایگان و پرو، تشخیص حرکت، آتش و دود؛ پشتیبانی RTSP/ONVIF/MJPEG؛ آژیر و اعلان.
 
 ## کلمات کلیدی
 دوربین مداربسته، دوربین IP، RTSP، ONVIF، تشخیص حرکت، هشدار آتش، دود، امنیت خانه
@@ -54,7 +58,9 @@
 **Full description:**
 Detective Camera watches your cameras and alerts you the moment it sees motion, fire or smoke.
 
-All processing happens on your phone. Nothing is uploaded; there are no ads or analytics.
+Image analysis happens entirely on your phone. Camera images and video never leave it; only your account and numeric usage counters are sent for sign-in and the Pro upgrade. There are no ads.
+
+Free: up to 2 cameras, motion detection, monitoring while the app is open. Pro (one-time purchase): unlimited cameras, fire and smoke detection, monitored zones, background monitoring.
 
 Supported sources: RTSP/IP cameras, ONVIF auto-discovery, MJPEG and snapshot over HTTP, an old phone used as a camera, or this phone's camera.
 
