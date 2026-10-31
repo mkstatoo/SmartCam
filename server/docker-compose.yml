@@ -1,0 +1,11 @@
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DC_DB_PATH: /data/detective.db
+    volumes:
+      - ./data:/data
+    ports:
+      - "127.0.0.1:8000:8000"   # فقط از طریق Nginx/Caddy در دسترس باشد

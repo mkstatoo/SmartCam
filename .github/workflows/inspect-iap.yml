@@ -1,0 +1,49 @@
+name: inspect-iap
+# فقط برای دیدن API پلاگین پرداخت؛ دستی اجرا می‌شود.
+on: workflow_dispatch
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      - name: Versions
+        run: |
+          echo "::notice::$(flutter --version | head -2 | tr '\n' ' ')"
+      - name: Fetch iran_iap
+        run: |
+          flutter create --platforms android tmp_inspect >/dev/null
+          cd tmp_inspect && flutter pub add iran_iap >/dev/null 2>&1 || echo "::error::pub add failed"
+          flutter pub get >/dev/null 2>&1
+          D=$(ls -d "$HOME"/.pub-cache/hosted/pub.dev/iran_iap-* | head -1)
+          echo "IAP_DIR=$D" >> "$GITHUB_ENV"
+          echo "::notice::dir=$D files=$(cd $D && find lib android -type f | head -40 | tr '\n' ' ')"
+      - name: README android setup
+        run: |
+          cd "$IAP_DIR"
+          python3 - <<'PY'
+          import os,re
+          t=open("README.md",encoding="utf-8").read()
+          i=t.lower().find("android")
+          chunks=[t[j:j+3200] for j in range(i,min(len(t),i+9600),3200)]
+          for c in chunks:
+              print("::notice::"+c.replace("%","%25").replace("\r","").replace("\n","%0A"))
+          PY
+      - name: Public models
+        run: |
+          cd "$IAP_DIR"
+          python3 - <<'PY'
+          import glob,re
+          out=[]
+          for f in sorted(glob.glob("lib/**/*.dart",recursive=True)):
+              src=open(f,encoding="utf-8").read()
+              if "MethodChannel" in src and "class IranIap" not in src: continue
+              keep=[l.rstrip() for l in src.splitlines() if re.match(r"\s*(abstract |sealed |final |base |interface )*(class|enum|mixin|typedef) ",l) or re.match(r"\s+(final |required |const |Future|Stream|static ).*[;,({]\s*$",l) and "///" not in l]
+              out.append("## "+f); out+=keep
+          t="\n".join(out)
+          chunks=[t[j:j+3500] for j in range(0,min(len(t),3500*9),3500)]
+          for c in chunks:
+              print("::notice::"+c.replace("%","%25").replace("\r","").replace("\n","%0A"))
+          PY
