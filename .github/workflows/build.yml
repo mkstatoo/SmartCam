@@ -28,7 +28,16 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r server/requirements-dev.txt
-      - run: cd server && python -m pytest -q
+      - name: pytest
+        run: |
+          cd server
+          set +e
+          python -m pytest -q -x 2>&1 | tee ../pytest.log
+          code=${PIPESTATUS[0]}
+          if [ "$code" -ne 0 ]; then
+            grep -E "^(E |FAILED|ERROR)|Error" ../pytest.log | head -12 | cut -c1-300 | while IFS= read -r l; do echo "::error::$l"; done
+          fi
+          exit $code
 
   android:
     name: Android (${{ matrix.variant }})
