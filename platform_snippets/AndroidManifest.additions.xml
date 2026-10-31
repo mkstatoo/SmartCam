@@ -1,0 +1,27 @@
+<!-- این موارد را در android/app/src/main/AndroidManifest.xml اضافه کنید -->
+
+<!-- ۱) بالای تگ <application> (داخل <manifest>) -->
+<uses-permission android:name="android.permission.INTERNET"/>
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+<uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+<uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
+<uses-permission android:name="android.permission.CAMERA"/>
+<uses-permission android:name="android.permission.WAKE_LOCK"/>
+<uses-permission android:name="android.permission.VIBRATE"/>
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+<uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA"/>
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+<uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+
+<!-- ۲) روی خود تگ <application> (دوربین‌های IP معمولاً http ساده دارند، نه https) -->
+<!--   android:usesCleartextTraffic="true" -->
+
+<!-- ۳) داخل <application> برای سرویس پیش‌زمینه (flutter_foreground_task) -->
+<service
+    android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
+    android:foregroundServiceType="dataSync|camera"
+    android:exported="false"/>
+
+<!-- ۴) android/app/build.gradle(.kts): minSdk = 24 -->

@@ -1,0 +1,25 @@
+<!-- این کلیدها را در ios/Runner/Info.plist (داخل <dict> اصلی) اضافه کنید -->
+
+<key>NSCameraUsageDescription</key>
+<string>برای استفاده از دوربین گوشی به‌عنوان دوربین مداربسته</string>
+
+<key>NSLocalNetworkUsageDescription</key>
+<string>برای اتصال به دوربین‌های شبکهٔ خانگی و یافتن دوربین‌های ONVIF</string>
+<key>NSBonjourServices</key>
+<array>
+  <string>_onvif._tcp</string>
+</array>
+
+<!-- دوربین‌های IP معمولاً http ساده دارند -->
+<key>NSAppTransportSecurity</key>
+<dict>
+  <key>NSAllowsArbitraryLoads</key>
+  <true/>
+</dict>
+
+<key>UIBackgroundModes</key>
+<array>
+  <string>audio</string>
+</array>
+
+<!-- ios/Podfile: platform :ios, '13.0' -->

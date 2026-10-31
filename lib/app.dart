@@ -1,0 +1,102 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
+import 'models/detection_event.dart';
+import 'services/monitor_manager.dart';
+import 'ui/alarm_overlay.dart';
+import 'ui/events_page.dart';
+import 'ui/home_page.dart';
+import 'ui/settings_page.dart';
+
+class DetectiveCameraApp extends StatelessWidget {
+  const DetectiveCameraApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'کارآگاه دوربین',
+      debugShowCheckedModeBanner: false,
+      locale: const Locale('fa', 'IR'),
+      supportedLocales: const [Locale('fa', 'IR'), Locale('en')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      themeMode: ThemeMode.dark,
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        colorSchemeSeed: const Color(0xFFE8590C),
+        scaffoldBackgroundColor: const Color(0xFF101114),
+      ),
+      builder: (context, child) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Stack(
+          children: [
+            child ?? const SizedBox.shrink(),
+            // صفحهٔ هشدار تمام‌صفحه روی همهٔ صفحه‌ها
+            ValueListenableBuilder<DetectionEvent?>(
+              valueListenable: manager.activeAlarm,
+              builder: (_, e, __) =>
+                  e == null ? const SizedBox.shrink() : AlarmOverlay(event: e),
+            ),
+          ],
+        ),
+      ),
+      home: const _Shell(),
+    );
+  }
+}
+
+class _Shell extends StatefulWidget {
+  const _Shell();
+
+  @override
+  State<_Shell> createState() => _ShellState();
+}
+
+class _ShellState extends State<_Shell> {
+  int _tab = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: manager,
+      builder: (context, _) {
+        final unack = manager.events.where((e) => !e.acknowledged).length;
+        return Scaffold(
+          body: IndexedStack(
+            index: _tab,
+            children: const [HomePage(), EventsPage(), SettingsPage()],
+          ),
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: _tab,
+            onDestinationSelected: (i) => setState(() => _tab = i),
+            destinations: [
+              const NavigationDestination(
+                icon: Icon(Icons.videocam_outlined),
+                selectedIcon: Icon(Icons.videocam),
+                label: 'دوربین‌ها',
+              ),
+              NavigationDestination(
+                icon: Badge(
+                  isLabelVisible: unack > 0,
+                  label: Text('$unack'),
+                  child: const Icon(Icons.notifications_outlined),
+                ),
+                selectedIcon: const Icon(Icons.notifications),
+                label: 'رویدادها',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings),
+                label: 'تنظیمات',
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}

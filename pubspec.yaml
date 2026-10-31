@@ -1,0 +1,49 @@
+name: detective_camera
+description: پایش دوربین‌ها روی گوشی؛ تشخیص حرکت، آتش و دود و اعلام فوری به کاربر.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+# نکته: نسخه‌ها را با `flutter pub upgrade --major-versions` به‌روز کنید.
+# در محیط ساخت این پروژه دسترسی به pub.dev نبود، پس resolve واقعی انجام نشده است.
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # دوربین گوشی (به‌عنوان یک منبع تصویر)
+  camera: ^0.11.0
+  # پخش و دریافت RTSP / RTMP / HLS / HTTP-FLV و ...
+  media_kit: ^1.1.11
+  media_kit_video: ^1.2.5
+  media_kit_libs_video: ^1.0.5
+  # رمزگشایی JPEG و ساخت تصویر کوچک برای ذخیرهٔ رویداد
+  image: ^4.2.0
+
+  # آلارم
+  audioplayers: ^6.1.0
+  vibration: ^2.0.0
+  flutter_local_notifications: ^18.0.1
+  wakelock_plus: ^1.2.8
+  flutter_foreground_task: ^8.10.4
+  permission_handler: ^11.3.1
+
+  # ذخیره‌سازی
+  shared_preferences: ^2.3.2
+  flutter_secure_storage: ^9.2.2
+  path_provider: ^2.1.4
+  path: ^1.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/sounds/
