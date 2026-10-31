@@ -41,11 +41,21 @@ jobs:
       - run: flutter pub get
 
       - name: Analyze (informational)
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
         continue-on-error: true
+        run: |
+          flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | tee analyze.log || true
+          # خطاها به‌صورت annotation هم ثبت می‌شوند تا بدون دانلود لاگ قابل خواندن باشند
+          grep -E "^\s*error " analyze.log | head -10 | cut -c1-350 | while IFS= read -r l; do echo "::warning::analyze: $l"; done
 
       - name: Build APK
-        run: flutter build apk --release
+        run: |
+          set +e
+          flutter build apk --release 2>&1 | tee build.log
+          code=${PIPESTATUS[0]}
+          if [ "$code" -ne 0 ]; then
+            grep -nE "error:|Error:|^e: |FAILURE|What went wrong|Could not|not found|Execution failed" build.log | head -9 | cut -c1-380 | while IFS= read -r l; do echo "::error::$l"; done
+          fi
+          exit $code
 
       - uses: actions/upload-artifact@v4
         with:
