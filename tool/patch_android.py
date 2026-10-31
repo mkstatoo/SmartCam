@@ -41,15 +41,26 @@ if "ForegroundService" not in text:
 
 manifest.write_text(text, encoding="utf-8")
 
-# minSdk = 24 (build.gradle یا build.gradle.kts)
+# minSdk = 24 + core library desugaring (لازم برای flutter_local_notifications)
+DESUGAR = "com.android.tools:desugar_jdk_libs:2.1.4"
 done = False
 for name in ("android/app/build.gradle.kts", "android/app/build.gradle"):
     g = root / name
     if not g.exists():
         continue
+    kts = name.endswith(".kts")
     s = g.read_text(encoding="utf-8")
-    s2 = re.sub(r"minSdk(Version)?\s*=?\s*(flutter\.minSdkVersion|\d+)", "minSdk = 24" if name.endswith(".kts") else "minSdkVersion 24", s)
-    if s2 != s:
-        g.write_text(s2, encoding="utf-8")
+    orig = s
+    s = re.sub(r"minSdk(Version)?\s*=?\s*(flutter\.minSdkVersion|\d+)",
+               "minSdk = 24" if kts else "minSdkVersion 24", s)
+    flag = "isCoreLibraryDesugaringEnabled = true" if kts else "coreLibraryDesugaringEnabled true"
+    if "ibraryDesugaringEnabled" not in s:
+        s = re.sub(r"(compileOptions\s*\{)", lambda m: m.group(1) + "\n        " + flag, s, count=1)
+    if "coreLibraryDesugaring(" not in s and "coreLibraryDesugaring '" not in s:
+        dep = (f'\ndependencies {{\n    coreLibraryDesugaring("{DESUGAR}")\n}}\n' if kts
+               else f"\ndependencies {{\n    coreLibraryDesugaring '{DESUGAR}'\n}}\n")
+        s += dep
+    if s != orig:
+        g.write_text(s, encoding="utf-8")
         done = True
-print("manifest patched; minSdk patched:", done)
+print("manifest patched; gradle patched:", done)
