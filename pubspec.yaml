@@ -1,11 +1,11 @@
 name: detective_camera
 description: پایش دوربین‌ها روی گوشی؛ تشخیص حرکت، آتش و دود و اعلام فوری به کاربر.
 publish_to: "none"
-version: 1.0.0+1
+version: 1.1.0+2
 
 environment:
-  sdk: ">=3.4.0 <4.0.0"
-  flutter: ">=3.22.0"
+  sdk: ">=3.12.0 <4.0.0"
+  flutter: ">=3.44.0"
 
 # نکته: نسخه‌ها را با `flutter pub upgrade --major-versions` به‌روز کنید.
 # در محیط ساخت این پروژه دسترسی به pub.dev نبود، پس resolve واقعی انجام نشده است.
@@ -31,6 +31,11 @@ dependencies:
   wakelock_plus: ^1.2.8
   flutter_foreground_task: ^8.10.4
   permission_handler: ^11.3.1
+
+  # پرداخت درون‌برنامه‌ای بازار و مایکت (فروشگاه هنگام ساخت انتخاب می‌شود)
+  iran_iap: ^0.3.1
+  # مدل گوشی برای پنل مدیریت (جلوگیری از سوءاستفادهٔ چنددستگاهی)
+  device_info_plus: ^11.0.0
 
   # ذخیره‌سازی
   shared_preferences: ^2.3.2

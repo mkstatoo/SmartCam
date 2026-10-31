@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../config.dart';
 import '../models/camera_config.dart';
+import '../services/account_manager.dart';
 import '../services/camera_monitor.dart';
 import '../services/monitor_manager.dart';
 import 'camera_edit_page.dart';
 import 'frame_view.dart';
+import 'paywall.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -35,22 +38,73 @@ class HomePage extends StatelessWidget {
             ],
           ),
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const CameraEditPage())),
+            onPressed: () {
+              if (!manager.canAddCamera) {
+                showPaywall(
+                  context,
+                  reason:
+                      'نسخهٔ رایگان حداکثر ${account.limits.maxCameras} دوربین دارد.',
+                );
+                return;
+              }
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const CameraEditPage()));
+            },
             icon: const Icon(Icons.add),
             label: const Text('افزودن دوربین'),
           ),
-          body: cams.isEmpty
-              ? const _Empty()
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
-                  itemCount: cams.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (_, i) => CameraTile(config: cams[i]),
-                ),
+          body: Column(
+            children: [
+              ListenableBuilder(
+                listenable: account,
+                builder: (_, __) => const _PlanBanner(),
+              ),
+              Expanded(
+                child: cams.isEmpty
+                    ? const _Empty()
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
+                        itemCount: cams.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (_, i) => CameraTile(config: cams[i]),
+                      ),
+              ),
+            ],
+          ),
         );
       },
+    );
+  }
+}
+
+/// نوار کوچک نسخهٔ رایگان؛ در نسخهٔ پرو دیده نمی‌شود.
+class _PlanBanner extends StatelessWidget {
+  const _PlanBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    if (!AppConfig.accountsEnabled || account.isPro) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Card(
+        color: const Color(0xFF2B2113),
+        child: ListTile(
+          dense: true,
+          leading: const Icon(Icons.workspace_premium, color: Colors.orangeAccent),
+          title: const Text('نسخهٔ رایگان', style: TextStyle(fontWeight: FontWeight.w700)),
+          subtitle: const Text(
+            'فقط حرکت، ۲ دوربین، پایش تا وقتی برنامه باز است. آتش و دود با نسخهٔ پرو.',
+            style: TextStyle(fontSize: 12),
+          ),
+          trailing: FilledButton.tonal(
+            onPressed: () => showPaywall(context),
+            child: const Text('پرو'),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -165,9 +219,12 @@ class CameraTile extends StatelessWidget {
                             _Badge(Icons.directions_run, config.motionEnabled),
                             _Badge(
                               Icons.local_fire_department,
-                              config.fireEnabled,
+                              config.fireEnabled && account.limits.fireSmoke,
                             ),
-                            _Badge(Icons.cloud, config.smokeEnabled),
+                            _Badge(
+                              Icons.cloud,
+                              config.smokeEnabled && account.limits.fireSmoke,
+                            ),
                             Text(
                               sourceTypeLabel(config.type),
                               style: const TextStyle(
@@ -182,7 +239,17 @@ class CameraTile extends StatelessWidget {
                   ),
                   Switch(
                     value: config.enabled,
-                    onChanged: (v) => manager.setCameraEnabled(config, v),
+                    onChanged: (v) {
+                      if (v && !manager.canEnable(config)) {
+                        showPaywall(
+                          context,
+                          reason:
+                              'نسخهٔ رایگان حداکثر ${account.limits.maxCameras} دوربین فعال دارد.',
+                        );
+                        return;
+                      }
+                      manager.setCameraEnabled(config, v);
+                    },
                   ),
                 ],
               ),

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'models/detection_event.dart';
+import 'services/account_manager.dart';
 import 'services/monitor_manager.dart';
 import 'ui/alarm_overlay.dart';
+import 'ui/auth_page.dart';
 import 'ui/events_page.dart';
 import 'ui/home_page.dart';
 import 'ui/settings_page.dart';
@@ -44,9 +46,48 @@ class DetectiveCameraApp extends StatelessWidget {
           ],
         ),
       ),
-      home: const _Shell(),
+      home: const _Gate(),
     );
   }
+}
+
+/// دروازهٔ برنامه: تا وقتی وارد حساب نشده‌ایم صفحهٔ ورود، بعد صفحهٔ اصلی.
+class _Gate extends StatefulWidget {
+  const _Gate();
+
+  @override
+  State<_Gate> createState() => _GateState();
+}
+
+class _GateState extends State<_Gate> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // با هر بازگشت به برنامه، مجوز تازه می‌شود (حداکثر هر ۱۰ دقیقه یک‌بار)
+    if (state == AppLifecycleState.resumed) account.refresh();
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: account,
+    builder: (_, __) {
+      if (!account.ready) {
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      }
+      return account.needsLogin ? const AuthPage() : const _Shell();
+    },
+  );
 }
 
 class _Shell extends StatefulWidget {

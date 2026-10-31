@@ -152,6 +152,22 @@ for name in ("android/app/build.gradle.kts", "android/app/build.gradle"):
                 "signingConfig signingConfigs.debug",
                 "signingConfig keystoreProperties['storeFile'] ? signingConfigs.release : signingConfigs.debug")
 
+    # placeholderهای مایکت (برای iran_iap؛ در ساخت‌های دیگر بی‌اثرند)
+    if "marketApplicationId" not in s:
+        if kts:
+            ph = (
+                '        manifestPlaceholders["marketApplicationId"] = "ir.mservices.market"\n'
+                '        manifestPlaceholders["marketBindAddress"] = "ir.mservices.market.InAppBillingService.BIND"\n'
+                '        manifestPlaceholders["marketPermission"] = "ir.mservices.market.BILLING"\n'
+            )
+        else:
+            ph = (
+                "        manifestPlaceholders += [marketApplicationId: 'ir.mservices.market',\n"
+                "            marketBindAddress: 'ir.mservices.market.InAppBillingService.BIND',\n"
+                "            marketPermission: 'ir.mservices.market.BILLING']\n"
+            )
+        s = re.sub(r"(defaultConfig\s*\{\n)", lambda m: m.group(1) + ph, s, count=1)
+
     if s != orig:
         g.write_text(s, encoding="utf-8")
         done = True
@@ -198,3 +214,46 @@ for name in ("android/build.gradle.kts", "android/build.gradle"):
     s = s[: m.start()] + block.lstrip("\n") + s[m.start():] if m else s + block
     g.write_text(s, encoding="utf-8")
     print("root gradle patched:", name)
+
+# ---------------------------------------------------------------------------
+# iran_iap: مخزن JitPack (SDK بازار و مایکت از آنجا می‌آید)
+# ---------------------------------------------------------------------------
+JITPACK_KTS = """        maven {
+            url = uri("https://jitpack.io")
+            content {
+                includeGroup("com.github.cafebazaar.Poolakey")
+                includeGroup("com.github.myketstore")
+            }
+        }
+"""
+JITPACK_GROOVY = """        maven {
+            url 'https://jitpack.io'
+            content {
+                includeGroup 'com.github.cafebazaar.Poolakey'
+                includeGroup 'com.github.myketstore'
+            }
+        }
+"""
+for name in ("android/build.gradle.kts", "android/build.gradle"):
+    g = root / name
+    if not g.exists():
+        continue
+    s = g.read_text(encoding="utf-8")
+    if "jitpack.io" in s:
+        continue
+    block = JITPACK_KTS if name.endswith(".kts") else JITPACK_GROOVY
+    s2, n = re.subn(r"(allprojects\s*\{\s*repositories\s*\{[^}]*?mavenCentral\(\)[^\n]*\n)",
+                    lambda m: m.group(1) + block, s, count=1, flags=re.S)
+    if n == 0:
+        print("WARNING: could not add JitPack to", name)
+        continue
+    g.write_text(s2, encoding="utf-8")
+    print("jitpack added:", name)
+
+# MainActivity باید FlutterFragmentActivity باشد (Activity Result API برای پرداخت بازار)
+for f in list((root / "android/app/src/main").rglob("MainActivity.*")):
+    t = f.read_text(encoding="utf-8")
+    t2 = re.sub(r"\bFlutterActivity\b", "FlutterFragmentActivity", t)
+    if t2 != t:
+        f.write_text(t2, encoding="utf-8")
+        print("MainActivity ->", "FlutterFragmentActivity", f.name)

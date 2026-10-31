@@ -64,14 +64,18 @@ class CameraConfig {
   DetectionZone zone;
   int phoneCameraIndex;
 
-  EngineConfig toEngineConfig() => EngineConfig(
+  /// [allowFireSmoke] و [allowZones] از مجوز کاربر می‌آیند (نسخهٔ رایگان: false).
+  EngineConfig toEngineConfig({
+    bool allowFireSmoke = true,
+    bool allowZones = true,
+  }) => EngineConfig(
     motionEnabled: motionEnabled,
-    fireEnabled: fireEnabled,
-    smokeEnabled: smokeEnabled,
+    fireEnabled: fireEnabled && allowFireSmoke,
+    smokeEnabled: smokeEnabled && allowFireSmoke,
     motionSensitivity: motionSensitivity,
     fireSensitivity: fireSensitivity,
     smokeSensitivity: smokeSensitivity,
-    zone: zone,
+    zone: allowZones ? zone : const DetectionZone(),
   );
 
   CameraConfig copy() => CameraConfig.fromJson(toJson(includeSecrets: true));

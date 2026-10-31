@@ -11,6 +11,7 @@ import '../models/camera_config.dart';
 import '../models/detection_event.dart';
 import '../sources/frame_source.dart';
 import '../sources/source_factory.dart';
+import 'account_manager.dart';
 
 enum MonitorState { stopped, connecting, live, error }
 
@@ -54,7 +55,10 @@ class CameraMonitor {
   Future<void> start() async {
     if (_running) return;
     _running = true;
-    _engine = DetectionEngine(config.toEngineConfig());
+    final lim = account.limits;
+    _engine = DetectionEngine(
+      config.toEngineConfig(allowFireSmoke: lim.fireSmoke, allowZones: lim.zones),
+    );
     await _connect();
     _watchdog = Timer.periodic(const Duration(seconds: 5), (_) => _check());
   }

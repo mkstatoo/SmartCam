@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../core/frame.dart';
 import '../models/camera_config.dart';
+import '../services/account_manager.dart';
 import '../services/monitor_manager.dart';
 import '../services/onvif_client.dart';
 import '../sources/source_factory.dart';
 import 'frame_view.dart';
+import 'paywall.dart';
 import 'zone_editor_page.dart';
 
 class CameraEditPage extends StatefulWidget {
@@ -209,7 +211,14 @@ class _CameraEditPageState extends State<CameraEditPage> {
     }
   }
 
+  bool _requirePro(bool allowed, String what) {
+    if (allowed) return true;
+    showPaywall(context, reason: '$what در نسخهٔ پرو فعال است.');
+    return false;
+  }
+
   Future<void> _editZone() async {
+    if (!_requirePro(account.limits.zones, 'تعیین ناحیهٔ پایش')) return;
     final z = await Navigator.of(context).push<dynamic>(
       MaterialPageRoute(
         builder: (_) => ZoneEditorPage(initial: _c.zone, frame: _preview.value),
@@ -220,6 +229,13 @@ class _CameraEditPageState extends State<CameraEditPage> {
 
   Future<void> _save() async {
     if (!_form.currentState!.validate()) return;
+    if (_isNew && !manager.canAddCamera) {
+      showPaywall(
+        context,
+        reason: 'نسخهٔ رایگان حداکثر ${account.limits.maxCameras} دوربین دارد.',
+      );
+      return;
+    }
     _syncFromFields();
     await manager.saveCamera(_c);
     if (mounted) Navigator.of(context).pop();
@@ -428,13 +444,22 @@ class _CameraEditPageState extends State<CameraEditPage> {
                 (v) => setState(() => _c.motionSensitivity = v),
               ),
             SwitchListTile(
-              value: _c.fireEnabled,
-              onChanged: (v) => setState(() => _c.fireEnabled = v),
+              value: _c.fireEnabled && account.limits.fireSmoke,
+              onChanged: (v) {
+                if (v && !_requirePro(account.limits.fireSmoke, 'تشخیص آتش')) {
+                  return;
+                }
+                setState(() => _c.fireEnabled = v);
+              },
               title: const Text('آتش'),
-              subtitle: const Text('با رنگ شعله و سوسوزدن'),
+              subtitle: Text(
+                account.limits.fireSmoke
+                    ? 'با رنگ شعله و سوسوزدن'
+                    : 'نیازمند نسخهٔ پرو 🔒',
+              ),
               secondary: const Icon(Icons.local_fire_department),
             ),
-            if (_c.fireEnabled)
+            if (_c.fireEnabled && account.limits.fireSmoke)
               _slider(
                 'حساسیت آتش',
                 _c.fireSensitivity,
@@ -443,13 +468,22 @@ class _CameraEditPageState extends State<CameraEditPage> {
                 (v) => setState(() => _c.fireSensitivity = v),
               ),
             SwitchListTile(
-              value: _c.smokeEnabled,
-              onChanged: (v) => setState(() => _c.smokeEnabled = v),
+              value: _c.smokeEnabled && account.limits.fireSmoke,
+              onChanged: (v) {
+                if (v && !_requirePro(account.limits.fireSmoke, 'تشخیص دود')) {
+                  return;
+                }
+                setState(() => _c.smokeEnabled = v);
+              },
               title: const Text('دود (آزمایشی)'),
-              subtitle: const Text('خطای کاذب بیشتری دارد'),
+              subtitle: Text(
+                account.limits.fireSmoke
+                    ? 'خطای کاذب بیشتری دارد'
+                    : 'نیازمند نسخهٔ پرو 🔒',
+              ),
               secondary: const Icon(Icons.cloud),
             ),
-            if (_c.smokeEnabled)
+            if (_c.smokeEnabled && account.limits.fireSmoke)
               _slider(
                 'حساسیت دود',
                 _c.smokeSensitivity,
@@ -462,7 +496,9 @@ class _CameraEditPageState extends State<CameraEditPage> {
               onPressed: _editZone,
               icon: const Icon(Icons.crop_free),
               label: Text(
-                _c.zone.isFullFrame
+                !account.limits.zones
+                    ? 'تعیین ناحیهٔ پایش (پرو 🔒)'
+                    : _c.zone.isFullFrame
                     ? 'تعیین ناحیهٔ پایش (الان: کل تصویر)'
                     : 'ویرایش ناحیهٔ پایش (${_c.zone.include.length} سبز، ${_c.zone.exclude.length} قرمز)',
               ),

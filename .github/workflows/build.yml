@@ -19,15 +19,35 @@ jobs:
       - uses: dart-lang/setup-dart@v1
       - run: dart run tool/run_core_tests.dart
 
+  server-tests:
+    name: Server tests (FastAPI)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r server/requirements-dev.txt
+      - run: cd server && python -m pytest -q
+
   android:
-    name: Build Android (APK + AAB)
+    name: Android (${{ matrix.variant }})
     runs-on: ubuntu-latest
     needs: core-tests
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [direct, bazaar, myket]
     env:
+      VARIANT: ${{ matrix.variant }}
       KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      # Settings → Secrets and variables → Actions → Variables
+      API_BASE: ${{ vars.API_BASE }}
+      PRIVACY_URL: ${{ vars.PRIVACY_URL }}
+      MYKET_PUBLIC_KEY: ${{ vars.MYKET_PUBLIC_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -74,6 +94,24 @@ jobs:
             echo "::warning::ANDROID_KEYSTORE_BASE64 secret is not set: signing with a THROWAWAY test key. Do not publish these files."
           fi
 
+      - name: Compute build defines
+        run: |
+          VERSION=$(grep -E '^version:' pubspec.yaml | sed -E 's/version:\s*//; s/\+.*//')
+          DEFS="--dart-define=APP_VERSION=$VERSION --dart-define=API_BASE=$API_BASE --dart-define=PRIVACY_URL=$PRIVACY_URL --dart-define=MYKET_PUBLIC_KEY=$MYKET_PUBLIC_KEY"
+          if [ "$VARIANT" != "direct" ]; then DEFS="$DEFS --dart-define=IRAN_IAP_STORE=$VARIANT"; fi
+          echo "DEFS=$DEFS" >> "$GITHUB_ENV"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          if [ -z "$API_BASE" ]; then
+            echo "::warning::API_BASE variable is empty: this build has NO accounts/paywall (all features unlocked, dev mode)."
+            if [ "${GITHUB_REF#refs/tags/v}" != "$GITHUB_REF" ] && [ -n "$KEYSTORE_BASE64" ]; then
+              echo "::error::Refusing to publish a release build without API_BASE."
+              exit 1
+            fi
+          fi
+          if [ "$VARIANT" = "myket" ] && [ -z "$MYKET_PUBLIC_KEY" ]; then
+            echo "::warning::MYKET_PUBLIC_KEY variable is empty: Myket purchases will fail at runtime."
+          fi
+
       - name: Analyze (informational)
         continue-on-error: true
         run: |
@@ -83,33 +121,57 @@ jobs:
       - name: Build universal APK
         run: |
           chmod +x tool/ci_build.sh
-          tool/ci_build.sh apk build apk --release --build-number="$GITHUB_RUN_NUMBER"
-          cp build/app/outputs/flutter-apk/app-release.apk dist/detective-camera-universal.apk
+          tool/ci_build.sh "apk-$VARIANT" build apk --release --build-number="$GITHUB_RUN_NUMBER" $DEFS
+          if [ "$VARIANT" = "direct" ]; then
+            cp build/app/outputs/flutter-apk/app-release.apk dist/detective-camera-universal.apk
+          else
+            cp build/app/outputs/flutter-apk/app-release.apk "dist/detective-camera-$VARIANT.apk"
+          fi
 
-      - name: Build per-ABI APKs
+      - name: Build per-ABI APKs (direct only)
+        if: matrix.variant == 'direct'
         run: |
-          tool/ci_build.sh split build apk --release --split-per-abi --build-number="$GITHUB_RUN_NUMBER"
+          tool/ci_build.sh split build apk --release --split-per-abi --build-number="$GITHUB_RUN_NUMBER" $DEFS
           for abi in arm64-v8a armeabi-v7a x86_64; do
             cp "build/app/outputs/flutter-apk/app-${abi}-release.apk" "dist/detective-camera-${abi}.apk"
           done
 
-      - name: Build App Bundle (AAB)
+      - name: Build App Bundle (direct only)
+        if: matrix.variant == 'direct'
         run: |
-          tool/ci_build.sh aab build appbundle --release --build-number="$GITHUB_RUN_NUMBER"
+          tool/ci_build.sh aab build appbundle --release --build-number="$GITHUB_RUN_NUMBER" $DEFS
           cp build/app/outputs/bundle/release/app-release.aab dist/detective-camera.aab
+
+      - name: Billing SDK isolation check (store builds)
+        if: matrix.variant != 'direct'
+        continue-on-error: true
+        run: |
+          dart run iran_iap doctor --store "$VARIANT" 2>&1 | tee doctor.log || true
+          dart run iran_iap verify --store "$VARIANT" "dist/detective-camera-$VARIANT.apk" 2>&1 | tee verify.log || true
+          for f in doctor.log verify.log; do
+            echo "::notice::iap-$f: $(tail -12 $f | tr '\n' ' ' | cut -c1-900)"
+          done
 
       - name: Verify outputs (signature, size, 16KB alignment)
         run: python3 tool/check_apk.py dist/*.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: detective-camera-${{ env.SIGNING }}-signed
+          name: detective-camera-${{ matrix.variant }}-${{ env.SIGNING }}-signed
           path: dist/*
 
-      - name: Publish GitHub Release (tags only)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
         with:
           files: dist/*
-          prerelease: ${{ env.SIGNING != 'release' }}
+          prerelease: ${{ secrets.ANDROID_KEYSTORE_BASE64 == '' }}
           generate_release_notes: true

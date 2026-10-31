@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
 import '../models/app_settings.dart';
 import '../models/camera_config.dart';
 import '../models/detection_event.dart';
+import '../models/license.dart';
+import 'account_manager.dart';
 import 'alarm_service.dart';
 import 'background_service.dart';
 import 'camera_monitor.dart';
@@ -28,6 +31,18 @@ class MonitorManager extends ChangeNotifier {
   bool _monitoring = false;
   bool get monitoring => _monitoring;
 
+  Limits _appliedLimits = Limits.free;
+
+  /// دوربین‌هایی که مجوز فعلی اجازهٔ پایششان را می‌دهد (به ترتیب فهرست).
+  List<CameraConfig> _allowed() =>
+      cameras.where((c) => c.enabled).take(account.limits.maxCameras).toList();
+
+  bool get canAddCamera => cameras.length < account.limits.maxCameras;
+
+  bool canEnable(CameraConfig c) =>
+      c.enabled ||
+      cameras.where((x) => x.enabled).length < account.limits.maxCameras;
+
   Future<void> init() async {
     _storage = await Storage.open();
     settings = _storage.loadSettings();
@@ -42,6 +57,9 @@ class MonitorManager extends ChangeNotifier {
       _ensureMonitor(c);
     }
     await notifications.init();
+    account.cameraCount = () => cameras.length;
+    _appliedLimits = account.limits;
+    account.addListener(_onAccountChanged);
     notifyListeners();
     if (_storage.monitoringWanted) await startMonitoring();
   }
@@ -60,10 +78,53 @@ class MonitorManager extends ChangeNotifier {
   Future<void> startMonitoring() async {
     _monitoring = true;
     await _storage.setMonitoringWanted(true);
-    await BackgroundService.start(keepScreenOn: settings.keepScreenOn);
-    for (final c in cameras.where((c) => c.enabled)) {
+    final lim = account.limits;
+    await BackgroundService.start(
+      // بدون سرویس پیش‌زمینه (رایگان) صفحه باید روشن بماند تا پایش قطع نشود
+      keepScreenOn: settings.keepScreenOn || !lim.background,
+      foreground: lim.background,
+    );
+    for (final c in _allowed()) {
       await _ensureMonitor(c).start();
     }
+    notifyListeners();
+  }
+
+  void _onAccountChanged() {
+    final lim = account.limits;
+    if (lim == _appliedLimits) return;
+    final old = _appliedLimits;
+    _appliedLimits = lim;
+    unawaited(_applyLimits(old));
+  }
+
+  /// مجوز عوض شد (خرید، انقضا، لغو): پایش را با محدودیت‌های جدید دوباره می‌چینیم.
+  Future<void> _applyLimits(Limits old) async {
+    if (_monitoring) {
+      final allowed = _allowed().map((c) => c.id).toSet();
+      for (final c in cameras) {
+        final m = monitors[c.id];
+        if (m == null) continue;
+        if (c.enabled && allowed.contains(c.id)) {
+          if (m.running) {
+            await m.restart(c);
+          } else {
+            await m.start();
+          }
+        } else {
+          await m.stop();
+        }
+      }
+      if (old.background != _appliedLimits.background) {
+        await BackgroundService.stop();
+        await BackgroundService.start(
+          keepScreenOn: settings.keepScreenOn || !_appliedLimits.background,
+          foreground: _appliedLimits.background,
+        );
+      }
+    }
+    _trimEvents();
+    await _storage.saveEvents(events);
     notifyListeners();
   }
 
@@ -88,7 +149,9 @@ class MonitorManager extends ChangeNotifier {
     } else {
       cameras.add(c);
       final m = _ensureMonitor(c);
-      if (_monitoring && c.enabled) await m.start();
+      if (_monitoring && c.enabled && _allowed().any((x) => x.id == c.id)) {
+        await m.start();
+      }
     }
     await _storage.saveCameras(cameras);
     notifyListeners();
@@ -121,6 +184,7 @@ class MonitorManager extends ChangeNotifier {
 
   void _onEvent(DetectionEvent e) {
     events.insert(0, e);
+    account.countEvent(e.kind);
     _trimEvents();
     _storage.saveEvents(events);
 
@@ -136,7 +200,8 @@ class MonitorManager extends ChangeNotifier {
   }
 
   void _trimEvents() {
-    while (events.length > settings.maxStoredEvents) {
+    final cap = math.min(settings.maxStoredEvents, account.limits.maxEvents);
+    while (events.length > cap) {
       final old = events.removeLast();
       _storage.deleteSnapshot(old.snapshotPath);
     }

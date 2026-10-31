@@ -5,6 +5,7 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:media_kit/media_kit.dart';
 
 import 'app.dart';
+import 'services/account_manager.dart';
 import 'services/background_service.dart';
 import 'services/monitor_manager.dart';
 
@@ -15,6 +16,7 @@ Future<void> main() async {
     FlutterForegroundTask.initCommunicationPort();
     BackgroundService.init();
   }
+  await account.init();
   await manager.init();
   runApp(const DetectiveCameraApp());
 }

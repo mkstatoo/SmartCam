@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../config.dart';
 import '../models/app_settings.dart';
+import '../services/account_manager.dart';
 import '../services/background_service.dart';
 import '../services/monitor_manager.dart';
+import 'account_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -25,6 +28,26 @@ class _SettingsPageState extends State<SettingsPage> {
       appBar: AppBar(title: const Text('تنظیمات')),
       body: ListView(
         children: [
+          if (AppConfig.accountsEnabled)
+            ListenableBuilder(
+              listenable: account,
+              builder: (context, _) => ListTile(
+                leading: Icon(
+                  account.isPro ? Icons.workspace_premium : Icons.account_circle_outlined,
+                ),
+                title: const Text('حساب کاربری'),
+                subtitle: Text(
+                  '${account.isPro ? 'نسخهٔ پرو' : 'نسخهٔ رایگان'}'
+                  '${account.user == null ? '' : ' • ${account.user!.identifier}'}',
+                  textDirection: TextDirection.ltr,
+                  textAlign: TextAlign.right,
+                ),
+                trailing: const Icon(Icons.chevron_left),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AccountPage()),
+                ),
+              ),
+            ),
           const _Header('هشدار'),
           ListTile(
             title: const Text('صدای هشدار حرکت'),
@@ -116,7 +139,8 @@ class _SettingsPageState extends State<SettingsPage> {
               'تشخیص آتش و دود در این برنامه بر پایهٔ تحلیل رنگ و حرکت تصویر است و '
               'جایگزین دتکتور دود/حرارت استاندارد نیست. ممکن است هشدار کاذب بدهد یا '
               'یک رویداد واقعی را تشخیص ندهد؛ فقط به‌عنوان یک لایهٔ کمکی استفاده کنید.\n\n'
-              'تمام پردازش روی همین گوشی انجام می‌شود و تصویری به اینترنت فرستاده نمی‌شود. '
+              'تمام پردازش روی همین گوشی انجام می‌شود و تصویری به اینترنت فرستاده نمی‌شود '
+              '(فقط اطلاعات حساب و آمار عددی مصرف به سرور می‌رود). '
               'اگر دوربین‌های دیگران یا مکان عمومی را پایش می‌کنید، قوانین حریم خصوصی را رعایت کنید.',
               style: TextStyle(
                 color: Colors.white60,

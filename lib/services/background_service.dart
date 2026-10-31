@@ -32,9 +32,14 @@ class BackgroundService {
     _inited = true;
   }
 
-  static Future<void> start({required bool keepScreenOn}) async {
+  /// [foreground] = false (نسخهٔ رایگان): سرویس پیش‌زمینه راه نمی‌افتد و پایش فقط
+  /// تا وقتی برنامه باز است ادامه دارد.
+  static Future<void> start({
+    required bool keepScreenOn,
+    bool foreground = true,
+  }) async {
     if (keepScreenOn) await WakelockPlus.enable();
-    if (!Platform.isAndroid) return;
+    if (!Platform.isAndroid || !foreground) return;
     init();
     if (await FlutterForegroundTask.isRunningService) return;
     await FlutterForegroundTask.startService(
