@@ -53,7 +53,7 @@ jobs:
           flutter build apk --release 2>&1 | tee build.log
           code=${PIPESTATUS[0]}
           if [ "$code" -ne 0 ]; then
-            grep -nE "error:|Error:|^e: |FAILURE|What went wrong|Could not|not found|Execution failed" build.log | head -9 | cut -c1-380 | while IFS= read -r l; do echo "::error::$l"; done
+            sed -n '/What went wrong/,/\* Try/p' build.log | head -10 | cut -c1-380 | while IFS= read -r l; do echo "::error::$l"; done
           fi
           exit $code
 
