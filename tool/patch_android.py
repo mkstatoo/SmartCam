@@ -64,3 +64,43 @@ for name in ("android/app/build.gradle.kts", "android/app/build.gradle"):
         g.write_text(s, encoding="utf-8")
         done = True
 print("manifest patched; gradle patched:", done)
+
+# پلاگین‌هایی که با compileSdk قدیمی ساخته شده‌اند (مثل vibration) با وابستگی‌های
+# جدید androidx ناسازگارند؛ compileSdk همهٔ زیرپروژه‌ها (جز app) را بالا می‌بریم.
+SUB_KTS = """
+// --- Detective Camera: compileSdk 35 for plugin subprojects ---
+subprojects {
+    if (project.name != "app") {
+        afterEvaluate {
+            extensions.findByName("android")?.withGroovyBuilder { "compileSdkVersion"(35) }
+        }
+    }
+}
+// --- end ---
+
+"""
+SUB_GROOVY = """
+// --- Detective Camera: compileSdk 35 for plugin subprojects ---
+subprojects {
+    if (project.name != 'app') {
+        afterEvaluate { p ->
+            if (p.hasProperty('android')) { p.android { compileSdkVersion 35 } }
+        }
+    }
+}
+// --- end ---
+
+"""
+for name in ("android/build.gradle.kts", "android/build.gradle"):
+    g = root / name
+    if not g.exists():
+        continue
+    s = g.read_text(encoding="utf-8")
+    if "Detective Camera: compileSdk" in s:
+        continue
+    block = SUB_KTS if name.endswith(".kts") else SUB_GROOVY
+    # باید قبل از اولین `subprojects {` بیاید (پیش از evaluationDependsOn)
+    m = re.search(r"^subprojects\s*\{", s, flags=re.M)
+    s = s[: m.start()] + block.lstrip("\n") + s[m.start():] if m else s + block
+    g.write_text(s, encoding="utf-8")
+    print("root gradle patched:", name)
