@@ -51,13 +51,13 @@ class BackgroundService {
     }
   }
 
-  /// درخواست معافیت از بهینه‌سازی باتری (مهم برای گوشی‌های شیائومی/سامسونگ/…).
-  static Future<void> requestBatteryExemption() async {
+  /// باز کردن صفحهٔ «بهینه‌سازی باتری» سیستم (مهم برای گوشی‌های شیائومی/سامسونگ/…).
+  /// کاربر خودش برنامه را از لیست انتخاب و «بدون محدودیت» می‌کند. این روش به مجوز
+  /// REQUEST_IGNORE_BATTERY_OPTIMIZATIONS نیاز ندارد (که در گوگل‌پلی محدود است).
+  static Future<void> openBatterySettings() async {
     if (!Platform.isAndroid) return;
     try {
-      if (!await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
-        await FlutterForegroundTask.requestIgnoreBatteryOptimization();
-      }
+      await FlutterForegroundTask.openIgnoreBatteryOptimizationSettings();
     } catch (_) {}
   }
 }

@@ -102,11 +102,12 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           ListTile(
             leading: const Icon(Icons.battery_saver),
-            title: const Text('معافیت از بهینه‌سازی باتری (اندروید)'),
+            title: const Text('تنظیمات باتری (اندروید)'),
             subtitle: const Text(
+              'برنامه را در فهرست پیدا کنید و روی «بدون محدودیت» بگذارید؛ '
               'در بعضی گوشی‌ها (شیائومی، سامسونگ، هواوی) بدون این کار سیستم پایش را می‌بندد',
             ),
-            onTap: BackgroundService.requestBatteryExemption,
+            onTap: BackgroundService.openBatterySettings,
           ),
           const _Header('درباره'),
           const Padding(
