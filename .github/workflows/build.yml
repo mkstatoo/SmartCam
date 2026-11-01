@@ -19,6 +19,20 @@ jobs:
       - uses: dart-lang/setup-dart@v1
       - run: dart run tool/run_core_tests.dart
 
+  eval-selftest:
+    name: Eval harness self-test (synthetic clips, NOT real accuracy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && pip install numpy
+      - run: python3 tool/make_synthetic_clips.py /tmp/syn
+      - run: dart tool/eval_videos.dart --manifest /tmp/syn/manifest.json --out /tmp/syn/report.json --min-recall 0.9
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eval-selftest-report
+          path: /tmp/syn/report.json
+
   server-tests:
     name: Server tests (FastAPI)
     runs-on: ubuntu-latest
