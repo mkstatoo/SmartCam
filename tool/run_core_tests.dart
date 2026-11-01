@@ -322,14 +322,21 @@ void main() {
 
   print('Smoke');
   {
+    // صحنهٔ رنگی (یک جسم سبز ثابت)، چون در تصویر تک‌رنگ دود غیرفعال است.
+    RgbFrame colored(int i) {
+      final f = noisyBg(i, level: 60);
+      paintRect(f, 0, 0, 60, 180, 40, 120, 50);
+      return f;
+    }
+
     final det = FireSmokeDetector();
     for (var i = 0; i < 10; i++) {
-      det.process(noisyBg(i, level: 60));
+      det.process(colored(i));
     }
     var smokeHits = 0;
     FireSmokeResult? r;
     for (var i = 10; i < 30; i++) {
-      final f = noisyBg(i, level: 60);
+      final f = colored(i);
       // لکهٔ خاکستری روشن‌تر که کم‌کم بزرگ می‌شود
       final grow = 20 + (i - 10) * 3;
       paintRect(
@@ -357,6 +364,34 @@ void main() {
       if (det2.process(noisyBg(i, level: 60)).smoke) fp++;
     }
     check('no smoke on static scene', fp == 0);
+
+    // تصویر تک‌رنگ (IR): همان لکهٔ خاکستری نباید دود حساب شود
+    final detIr = FireSmokeDetector();
+    var irHits = 0;
+    var irMono = false;
+    for (var i = 0; i < 30; i++) {
+      final f = noisyBg(i, level: 60);
+      if (i >= 10) {
+        final grow = 20 + (i - 10) * 3;
+        paintRect(f, 160 - grow, 120 - grow, 160 + grow, 120 + grow ~/ 2 + 20,
+            140, 142, 144);
+      }
+      final r = detIr.process(f);
+      if (r.smoke) irHits++;
+      irMono = r.monochrome;
+    }
+    check('monochrome (IR) scene: smoke disabled', irHits == 0 && irMono,
+        'hits=$irHits mono=$irMono');
+
+    // برش ناگهانی صحنه (پرش دوربین) نباید دود بسازد
+    final detCut = FireSmokeDetector();
+    var cutFp = 0;
+    for (var i = 0; i < 40; i++) {
+      final f = noisyBg(i, level: i % 6 < 3 ? 60 : 150);
+      paintRect(f, 0, 0, 60, 180, 40, 120, 50);
+      if (detCut.process(f).smoke) cutFp++;
+    }
+    check('repeated scene cuts are not smoke', cutFp == 0, 'fp=$cutFp');
 
     final det3 = FireSmokeDetector();
     for (var i = 0; i < 6; i++) {

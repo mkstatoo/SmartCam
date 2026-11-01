@@ -35,6 +35,7 @@ class FireSmokeResult {
     this.smoke = false,
     this.smokeScore = 0,
     this.smokeBbox,
+    this.monochrome = false,
   });
 
   final bool fire;
@@ -45,6 +46,10 @@ class FireSmokeResult {
   final bool smoke;
   final double smokeScore;
   final NormRect? smokeBbox;
+
+  /// تصویر تقریباً بی‌رنگ است (مادون‌قرمز/سیاه‌وسفید). در این حالت دود تشخیص
+  /// داده نمی‌شود، چون «خاکستری بودن» دیگر نشانهٔ دود نیست.
+  final bool monochrome;
 }
 
 /// تشخیص آتش و دود بدون مدل یادگیری ماشین (قاعده‌محور):
@@ -73,10 +78,18 @@ class FireSmokeDetector {
   int _frames = 0;
   final List<double> _smokeRatios = [];
 
+  /// میانگین متحرک نسبت پیکسل‌های رنگی؛ برای تشخیص تصویر IR/سیاه‌وسفید.
+  double _colorEma = 1.0;
+
+  /// تعداد فریم‌های پس از آخرین تغییر ناگهانی کل صحنه (مثل پرش بین دوربین‌ها).
+  int _sinceCut = 0;
+
   void reset() {
     _hist = null;
     _slowBg = null;
     _frames = 0;
+    _colorEma = 1.0;
+    _sinceCut = 0;
     _smokeRatios.clear();
   }
 
@@ -120,6 +133,7 @@ class FireSmokeDetector {
     var flicker = 0;
     var smokeCand = 0;
     var lightChangePixels = 0;
+    var colorful = 0;
 
     final colCnt = Uint16List(w);
     final rowCnt = Uint16List(h);
@@ -156,6 +170,7 @@ class FireSmokeDetector {
           final mn = r < g ? (r < b ? r : b) : (g < b ? g : b);
           final d = (gray - bg[i]).abs();
           if (d > 10) lightChangePixels++;
+          if (mx - mn > 14) colorful++;
           if (mx - mn <= 18 &&
               gray >= 70 &&
               gray <= 215 &&
@@ -183,12 +198,24 @@ class FireSmokeDetector {
 
     // ---- تصمیم دود ----
     final lightChange = lightChangePixels / _maskCount > 0.6;
-    final smokeRatio = lightChange ? 0.0 : smokeCand / _maskCount;
+    final colorRatio = colorful / _maskCount;
+    _colorEma = _frames == 1
+        ? colorRatio
+        : _colorEma + (colorRatio - _colorEma) * 0.1;
+    final mono = _frames >= 10 && _colorEma < 0.03;
+    if (lightChange) {
+      // تغییر ناگهانی کل صحنه (برش دوربین، چراغ، فلاش): تاریخچهٔ دود بی‌اعتبار است.
+      _sinceCut = 0;
+      _smokeRatios.clear();
+    } else {
+      _sinceCut++;
+    }
+    final smokeRatio = (lightChange || mono) ? 0.0 : smokeCand / _maskCount;
     _smokeRatios.add(smokeRatio);
     if (_smokeRatios.length > 8) _smokeRatios.removeAt(0);
 
     var smoke = false;
-    if (_frames >= 8 && _smokeRatios.length == 8) {
+    if (!mono && _sinceCut >= 8 && _frames >= 8 && _smokeRatios.length == 8) {
       final recent = _smokeRatios.sublist(5);
       final earlier = _smokeRatios.sublist(2, 5);
       final allAbove = _smokeRatios
@@ -214,6 +241,7 @@ class FireSmokeDetector {
       smoke: smoke,
       smokeScore: smokeRatio,
       smokeBbox: smoke ? _bounds(smokeCol, smokeRow, w, h) : null,
+      monochrome: mono,
     );
   }
 
