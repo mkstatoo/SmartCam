@@ -37,6 +37,7 @@ class _Opts {
   List<double> sens = [0.4, 0.6, 0.8];
   double primary = 0.6;
   double fps = 2;
+  bool fpsSet = false;
   int width = 320;
   double tol = 3;
   String? manifest, init, out, dumpFp;
@@ -65,7 +66,7 @@ Future<void> main(List<String> args) async {
   final mf = File(o.manifest!);
   final base = mf.parent.path;
   final j = jsonDecode(await mf.readAsString()) as Map<String, dynamic>;
-  o.fps = (j['analysis_fps'] as num?)?.toDouble() ?? o.fps;
+  if (!o.fpsSet) o.fps = (j['analysis_fps'] as num?)?.toDouble() ?? o.fps;
   final videos = _loadVideos(j, base);
   if (videos.isEmpty) {
     stderr.writeln('هیچ ویدیویی در manifest نیست.');
@@ -490,6 +491,7 @@ _Opts _parse(List<String> a) {
         o.primary = double.parse(next());
       case '--fps':
         o.fps = double.parse(next());
+        o.fpsSet = true;
       case '--width':
         o.width = int.parse(next());
       case '--tol':
